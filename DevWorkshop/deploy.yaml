@@ -1,0 +1,57 @@
+data:
+  FUNCTIONS_WORKER_RUNTIME: bm9kZQ==
+  AzureWebJobsStorage: RGVmYXVsdEVuZHBvaW50c1Byb3RvY29sPWh0dHBzO0VuZHBvaW50U3VmZml4PWNvcmUud2luZG93cy5uZXQ7QWNjb3VudE5hbWU9a2VkYWlkYW47QWNjb3VudEtleT0xWXNEOU9XWkdWTnUrVTRXd01nNkI3b0xtWlZMbExkSzFCTEtMSmM0QkJjUGRGUytvRTNzamRvNGVuTUppU2YzNWlpTE9uRVNyWDduRmhFODAyQXJkUT09
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hello-keda
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-keda
+  namespace: default
+  labels:
+    app: hello-keda
+spec:
+  selector:
+    matchLabels:
+      app: hello-keda
+  template:
+    metadata:
+      labels:
+        app: hello-keda
+    spec:
+      containers:
+      - name: hello-keda
+        image: idanshahar/hello-keda
+        env:
+        - name: AzureFunctionsJobHost__functions__0
+          value: KedaFirework
+        envFrom:
+        - secretRef:
+            name: hello-keda
+      tolerations:
+      - operator: Exists
+---
+apiVersion: keda.k8s.io/v1alpha1
+kind: ScaledObject
+metadata:
+  name: hello-keda
+  namespace: default
+  labels:
+    deploymentName: hello-keda
+spec:
+  scaleTargetRef:
+    deploymentName: hello-keda
+  triggers:
+  - type: azure-queue
+    metadata:
+      name: myQueueItem
+      type: queueTrigger
+      direction: in
+      queueName: js-queue-items
+      connection: AzureWebJobsStorage
+---
+
